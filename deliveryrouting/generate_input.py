@@ -135,16 +135,17 @@ class preparation:
             json.dump(destinations_json_file, outfile,indent=4)
         print('\n[checked] route distances.\n')
 
-origins_csv = os.path.join('.', 'data', 'origins.csv')
-destinations_csv = os.path.join('.', 'data', 'destinations.csv')
-combined_csv = pd.concat([pd.read_csv(origins_csv),pd.read_csv(destinations_csv)],ignore_index=True,copy=False)
-origins_json = os.path.join('.', 'database', 'origins.json')
-destinations_json = os.path.join('.', 'database', 'destinations.json')
-extent_json = os.path.join('.', 'database', 'extent.json')
-graph_path = os.path.join('.', 'database', 'graph.graphml')
-req_nearby_pts = 20
 
 def main():
+    origins_csv = os.path.join('.', 'data', 'origins.csv')
+    destinations_csv = os.path.join('.', 'data', 'destinations.csv')
+    combined_csv = pd.concat([pd.read_csv(origins_csv),pd.read_csv(destinations_csv)],ignore_index=True,copy=False)
+    origins_json = os.path.join('.', 'database', 'origins.json')
+    destinations_json = os.path.join('.', 'database', 'destinations.json')
+    extent_json = os.path.join('.', 'database', 'extent.json')
+    graph_path = os.path.join('.', 'database', 'graph.graphml')
+    req_nearby_pts = 20
+    
     conv = preparation()
     conv.generate_json(origins_csv, origins_json)
     conv.generate_json(destinations_csv, destinations_json)
