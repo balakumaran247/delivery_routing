@@ -161,6 +161,14 @@ class delivery_routing:
             ordered_best_route = list1+list2
         return ordered_best_route
 
+def route_formatted(best_route_list):
+    best_route_string = ''
+    for item in best_route_list:
+        if best_route_list.index(item) != len(best_route_list)-1:
+            best_route_string += str(item) + ' -> '
+        else:
+            best_route_string += str(item)
+    return best_route_string
 
 def main():
     origins_json = os.path.join('.', 'database', 'origins.json')
@@ -181,9 +189,9 @@ def main():
     generations=1000
 
     routing = delivery_routing(origins_file, destinations_file, pop_size, elite_size, mutation_rate, generations)
-    best_route = routing.genetic_algorithm(city_list)
-    print("\n",best_route)
-    print(len(best_route))
+    best_route_list = routing.genetic_algorithm(city_list)
+    best_route = route_formatted(best_route_list)
+    print('\n',best_route)
 
 if __name__ == '__main__':
     main()
