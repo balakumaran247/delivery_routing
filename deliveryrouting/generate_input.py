@@ -83,8 +83,8 @@ class preparation:
                 range_pts = matrix[i][:req_nearby_pts]
             for point in range_pts:
                 e_dist_loc=combined_csv['uno'][np.where(matrix[i] == point)[0][0]]
-                if e_dist_loc not in origins_file.keys():
-                    e_dist_pts.append(e_dist_loc)
+                #if e_dist_loc not in origins_file.keys():
+                e_dist_pts.append(e_dist_loc)
             current_loc = combined_csv['uno'][i]
             if current_loc in origins_file.keys():
                 origins_file[current_loc]['e_dist_pts'] = e_dist_pts
@@ -95,23 +95,38 @@ class preparation:
         with open(destinations_json, "w") as outfile:
             json.dump(destinations_file, outfile, indent=4)
     
-    def route_dist(self, graph_path, origins_json, destinations_json):
-        print('\nloading graph...')
-        graph = ox.io.load_graphml(graph_path)
+    def nearest_node(self, graph, origins_json, destinations_json, nearest_node_json):
         with open(origins_json) as o_file:
             origins_json_file = json.load(o_file)
         with open(destinations_json) as d_file:
             destinations_json_file = json.load(d_file)
+        nearest_node_dict = {}
+        print('\ncalculating nearby node...\n')
+        for item in [i for i in origins_json_file.keys()]+[j for j in destinations_json_file.keys()]:
+            if item in origins_json_file.keys():
+                item_lat = float(origins_json_file[item]['lat'])
+                item_lon = float(origins_json_file[item]['lon'])
+            else:
+                item_lat = float(destinations_json_file[item]['lat'])
+                item_lon = float(destinations_json_file[item]['lon'])
+            item_node = ox.distance.nearest_nodes(graph, item_lon, item_lat, return_dist=False)
+            nearest_node_dict[item]=item_node
+        with open(nearest_node_json, "w") as outfile:
+            json.dump(nearest_node_dict, outfile, indent=4)
+
+    def route_dist(self, graph, origins_json, destinations_json, nearest_node_json):
+        with open(origins_json) as o_file:
+            origins_json_file = json.load(o_file)
+        with open(destinations_json) as d_file:
+            destinations_json_file = json.load(d_file)
+        with open(nearest_node_json) as n_file:
+            nearest_node_file = json.load(n_file)
         print('\ncalculating route distances...\n')
         for origin in origins_json_file.keys():
-            origin_lat = float(origins_json_file[origin]['lat'])
-            origin_lon = float(origins_json_file[origin]['lon'])
-            origin_node = ox.distance.nearest_nodes(graph, origin_lon, origin_lat, return_dist=False)
+            origin_node = nearest_node_file[origin]
             length_dict = {}
             for dest in origins_json_file[origin]['e_dist_pts']:
-                dest_lat = float(destinations_json_file[dest]['lat'])
-                dest_lon = float(destinations_json_file[dest]['lon'])
-                dest_node = ox.distance.nearest_nodes(graph, dest_lon, dest_lat, return_dist=False)
+                dest_node = nearest_node_file[dest]
                 length = nx.shortest_path_length(G=graph, source=origin_node, target=dest_node, weight='length')
                 length_dict[dest]=length
             origins_json_file[origin]['r_dist']=length_dict
@@ -125,14 +140,10 @@ class preparation:
                 text = 'calculating'
                 return progress, text
             count+=1
-            origin_lat = float(destinations_json_file[origin]['lat'])
-            origin_lon = float(destinations_json_file[origin]['lon'])
-            origin_node = ox.distance.nearest_nodes(graph, origin_lon, origin_lat, return_dist=False)
+            origin_node = nearest_node_file[origin]
             length_dict = {}
             for dest in destinations_json_file[origin]['e_dist_pts']:
-                dest_lat = float(destinations_json_file[dest]['lat'])
-                dest_lon = float(destinations_json_file[dest]['lon'])
-                dest_node = ox.distance.nearest_nodes(graph, dest_lon, dest_lat, return_dist=False)
+                dest_node = nearest_node_file[dest]
                 length = nx.shortest_path_length(G=graph, source=origin_node, target=dest_node, weight='length')
                 length_dict[dest]=length
             destinations_json_file[origin]['r_dist']=length_dict
@@ -149,6 +160,7 @@ def main():
     destinations_json = os.path.join('.', 'database', 'destinations.json')
     extent_json = os.path.join('.', 'database', 'extent.json')
     graph_path = os.path.join('.', 'database', 'graph.graphml')
+    nearest_node_json = os.join('.', 'database', 'nearest_node.json')
     
     req_nearby_pts = 20
     
@@ -157,7 +169,10 @@ def main():
     conv.generate_json(destinations_csv, destinations_json)
     conv.generate_graph(combined_csv, extent_json, graph_path)
     conv.distance_matrix(combined_csv, origins_json, destinations_json, req_nearby_pts)
-    conv.route_dist(graph_path, origins_json, destinations_json)
+    print('\nloading graph...\n')
+    graph = ox.io.load_graphml(graph_path)
+    conv.nearest_node(graph, origins_json, destinations_json, nearest_node_json)
+    conv.route_dist(graph, origins_json, destinations_json, nearest_node_json)
 
 if __name__ == '__main__':
     main()
