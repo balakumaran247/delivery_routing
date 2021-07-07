@@ -2,6 +2,7 @@ import numpy as np
 import random, operator, os, json, sys
 import pandas as pd
 import matplotlib.pyplot as plt
+from generate_input import progressbar
 
 class Fitness:
     def __init__(self, route, origins_file, destinations_file):
@@ -145,12 +146,11 @@ class delivery_routing:
     def genetic_algorithm(self, population):
         pop = self.initial_population(population)
         for i in range(0, self.generations):
-            # progressbar
-            progress = i/self.generations
-            block = int(round(10*progress))
-            progress_text = "\rCalculating best route: [{0}] {1:.2f}% {2}".format( "#"*block + "-"*(10-block), progress*100, 'completed')
-            sys.stdout.write(progress_text)
-            sys.stdout.flush()
+            @progressbar
+            def progress_func():
+                progress = i/self.generations
+                text = 'calculating best route'
+                return progress, text
             pop = self.next_generation(pop)
         best_route_index = self.rank_routes(pop)[0][0]
         best_route = pop[best_route_index]

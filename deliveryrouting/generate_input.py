@@ -5,6 +5,13 @@ import osmnx as ox
 import networkx as nx
 import scipy
 
+def progressbar(func):
+    progress, text = func()
+    block = int(round(10*progress))
+    progress_text = "\r{0}: [{1}] {2:.2f}% {3}".format(text, "#"*block + "-"*(10-block), progress*100, 'completed')
+    sys.stdout.write(progress_text)
+    sys.stdout.flush()
+
 class preparation:
     '''
     Converts the input csv files to json files
@@ -63,12 +70,11 @@ class preparation:
         with open(destinations_json) as d_file:
             destinations_file = json.load(d_file)
         for i in range(len(combined_csv['uno'])):
-            # progressbar
-            progress = (i+1)/len(combined_csv['uno'])
-            block = int(round(10*progress))
-            progress_text = "\rCalculating: [{0}] {1:.2f}% {2}".format( "#"*block + "-"*(10-block), progress*100, 'completed')
-            sys.stdout.write(progress_text)
-            sys.stdout.flush()
+            @progressbar
+            def progress_func():
+                progress = (i+1)/len(combined_csv['uno'])
+                text = 'calculating'
+                return progress, text
             matrix[i].sort()
             e_dist_pts = []
             if len(destinations_file.keys()) < req_nearby_pts:
@@ -113,12 +119,11 @@ class preparation:
             json.dump(origins_json_file, outfile, indent=4)
         count=1
         for origin in destinations_json_file.keys():
-            # progressbar
-            progress = count/len(destinations_json_file.keys())
-            block = int(round(10*progress))
-            progress_text = "\rCalculating: [{0}] {1:.2f}% {2}".format( "#"*block + "-"*(10-block), progress*100, 'completed')
-            sys.stdout.write(progress_text)
-            sys.stdout.flush()
+            @progressbar
+            def progress_func():
+                progress = count/len(destinations_json_file.keys())
+                text = 'calculating'
+                return progress, text
             count+=1
             origin_lat = float(destinations_json_file[origin]['lat'])
             origin_lon = float(destinations_json_file[origin]['lon'])
@@ -144,6 +149,7 @@ def main():
     destinations_json = os.path.join('.', 'database', 'destinations.json')
     extent_json = os.path.join('.', 'database', 'extent.json')
     graph_path = os.path.join('.', 'database', 'graph.graphml')
+    
     req_nearby_pts = 20
     
     conv = preparation()
