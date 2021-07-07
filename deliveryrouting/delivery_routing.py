@@ -161,6 +161,11 @@ class delivery_routing:
             ordered_best_route = list1+list2
         return ordered_best_route
 
+def exclusion():
+    x = input('Exclude Locations:')
+    excluded_list = [j.strip() for j in x.split(',')]
+    return excluded_list
+
 def route_formatted(best_route_list):
     best_route_string = ''
     for item in best_route_list:
@@ -171,17 +176,20 @@ def route_formatted(best_route_list):
     return best_route_string
 
 def main():
+    excluded_list = exclusion()
     origins_json = os.path.join('.', 'database', 'origins.json')
     destinations_json = os.path.join('.', 'database', 'destinations.json')
     with open(origins_json) as o_file:
         origins_file= json.load(o_file)
     with open(destinations_json) as d_file:
         destinations_file= json.load(d_file)
+    
     city_list = []
     for i in origins_file.keys():
         city_list.append(i)
     for j in destinations_file.keys():
-        city_list.append(j)
+        if j not in excluded_list:
+            city_list.append(j)
     
     pop_size = 200
     elite_size=10
