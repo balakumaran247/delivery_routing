@@ -1,8 +1,11 @@
 import numpy as np
 import random, operator, os, json, sys
+import folium
 import pandas as pd
+import osmnx as ox
+import networkx as nx
 import matplotlib.pyplot as plt
-from generate_input import progressbar
+from deliveryrouting.generate_input import progressbar
 
 class Fitness:
     def __init__(self, route, origins_file, destinations_file):
@@ -175,14 +178,47 @@ def route_formatted(best_route_list):
             best_route_string += str(item)
     return best_route_string
 
+def interactive_mapping(graph_path, origins_file, destinations_file, best_route_list, nearest_node_file):
+    print('\nloading graph...\n')
+    graph = ox.io.load_graphml(graph_path)
+    print('\nGenerating Interactive Map...\n')
+    o_lat = [origins_file[key]['lat'] for key in origins_file.keys()][0]
+    o_lon = [origins_file[key]['lon'] for key in origins_file.keys()][0]
+    o_pop = [key for key in origins_file.keys()][0]
+    m = folium.Map(location= [o_lat, o_lon],tiles= 'OpenStreetMap', zoom_start=10)
+    folium.Marker(location=[o_lat, o_lon],popup=o_pop).add_to(m)
+    
+    for key in destinations_file.keys():
+        d_lat = destinations_file[key]['lat']
+        d_lon = destinations_file[key]['lon']
+        folium.CircleMarker(location=[d_lat, d_lon], radius=5, color='red', fill_color='red', fill_opacity=1, popup=key).add_to(m)
+    for i in range(0, len(best_route_list)):
+        fromCity = best_route_list[i]
+        toCity = None
+        if i + 1 < len(best_route_list):
+            toCity = best_route_list[i + 1]
+        else:
+            toCity = best_route_list[0]
+        o_n = nearest_node_file[fromCity]
+        d_n = nearest_node_file[toCity]
+        route = nx.shortest_path(G=graph, source=o_n, target=d_n, weight='length')
+        ox.folium.plot_route_folium(graph, route, route_map=m)
+    return m
+    
+
 def main():
     excluded_list = exclusion()
     origins_json = os.path.join('.', 'database', 'origins.json')
     destinations_json = os.path.join('.', 'database', 'destinations.json')
+    nearest_node_json = os.path.join('.', 'database', 'nearest_node.json')
+    graph_path = os.path.join('.', 'database', 'graph.graphml')
+
     with open(origins_json) as o_file:
         origins_file= json.load(o_file)
     with open(destinations_json) as d_file:
         destinations_file= json.load(d_file)
+    with open(nearest_node_json) as n_file:
+        nearest_node_file= json.load(n_file)
     
     city_list = []
     for i in origins_file.keys():
@@ -192,14 +228,15 @@ def main():
             city_list.append(j)
     
     pop_size = 200
-    elite_size=10
-    mutation_rate=0.1
+    elite_size=40
+    mutation_rate=0.01
     generations=1000
 
     routing = delivery_routing(origins_file, destinations_file, pop_size, elite_size, mutation_rate, generations)
     best_route_list = routing.genetic_algorithm(city_list)
     best_route = route_formatted(best_route_list)
-    print('\n',best_route)
+    interactive_map = interactive_mapping(graph_path, origins_file, destinations_file, best_route_list, nearest_node_file)
+    return best_route, interactive_map
 
 if __name__ == '__main__':
     main()
